@@ -21,6 +21,24 @@ WORKFLOW_NAME = "criatividade-comp"
 OUTPUT_DIR = "results"
 
 
+def find_latest_json_files(output_dir):
+    """Find the latest generated JSON files in the output directory."""
+    lyrics_file = None
+    chords_file = None
+    
+    if os.path.exists(output_dir):
+        files = os.listdir(output_dir)
+        for file in files:
+            if file.endswith(".json"):
+                file_path = os.path.join(output_dir, file)
+                if "lyrics" in file.lower():
+                    lyrics_file = file_path
+                elif "guitar" in file.lower() or "chord" in file.lower():
+                    chords_file = file_path
+    
+    return lyrics_file, chords_file
+
+
 def display_synced_lyrics(synced_data):
     """Display lyrics with chord buttons on black background."""
     if not synced_data:
@@ -74,6 +92,22 @@ with col1:
 st.divider()
 st.header("⚙️ Process Audio with Music.AI")
 
+# Check for pre-existing JSON files from results folder
+lyrics_file, chords_file = find_latest_json_files(OUTPUT_DIR)
+pre_existing_files = lyrics_file and chords_file
+
+if pre_existing_files and "synced_data" not in st.session_state:
+    st.info("📁 Found pre-existing JSON files in the results folder. Loading...")
+    with st.spinner("Loading pre-existing data..."):
+        lyrics_data, chords_data = load_json_files(lyrics_file, chords_file)
+        if lyrics_data and chords_data:
+            # Automatically sync
+            with st.spinner("Synchronizing lyrics with chords..."):
+                synced_result = sync_lyrics_with_chords(lyrics_data, chords_data, verbose=False)
+                if synced_result:
+                    st.session_state.synced_data = synced_result
+                    st.success(f"✅ Loaded and synchronized data from:\n- {os.path.basename(lyrics_file)}\n- {os.path.basename(chords_file)}")
+
 if "audio_data" in st.session_state and st.session_state.audio_data:
     if st.button("🚀 Process with Music.AI", key="process_music_ai"):
         try:
@@ -122,7 +156,8 @@ if "audio_data" in st.session_state and st.session_state.audio_data:
             st.error(f"Error processing with Music.AI: {str(e)}")
             st.session_state.show_backup_upload = True
 else:
-    st.info("👈 Please upload an audio file first")
+    if not pre_existing_files:
+        st.info("👈 Please upload an audio file first")
 
 # Show backup file upload only if processing failed
 if st.session_state.get("show_backup_upload", False):

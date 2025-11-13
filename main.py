@@ -3,7 +3,7 @@ import os
 import json
 
 # Configuration
-API_KEY = os.getenv("API_KEY", "")
+API_KEY = os.getenv("API_KEY")
 WORKFLOW_NAME = "criatividade-comp"
 MP3_FILE_PATH = "yellow.mp3"  # Path to your Coldplay MP3 file
 OUTPUT_DIR = "results"
@@ -53,7 +53,7 @@ def process_audio_with_music_ai(api_key, workflow_name, mp3_file_path, output_di
         job_result = music_ai.add_job(
             "Criatividade Computacional - Music Generation",
             workflow_name,
-            {"inputUrl": song_url},
+            {"inputAudio": song_url},
         )
         job_id = job_result["id"]
         if verbose:
@@ -94,10 +94,15 @@ def process_audio_with_music_ai(api_key, workflow_name, mp3_file_path, output_di
             chords_file = None
             
             for file_path in result_files:
-                if "lyrics" in file_path.lower():
-                    lyrics_file = file_path
-                elif "guitar" in file_path.lower() or "chord" in file_path.lower():
-                    chords_file = file_path
+                # Ensure file_path is a valid path
+                if not os.path.isabs(file_path):
+                    file_path = os.path.join(output_dir, file_path)
+                
+                if os.path.exists(file_path):
+                    if "lyrics" in file_path.lower():
+                        lyrics_file = file_path
+                    elif "guitar" in file_path.lower() or "chord" in file_path.lower():
+                        chords_file = file_path
             
             if verbose:
                 print("\n" + "=" * 60)
